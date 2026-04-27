@@ -1,0 +1,10 @@
+1,Matrix,fain,sf,NU,10
+2,Matrix2,ok,sf,DA,7
+3,StrangerThings,super,sf,DA,3
+4,Transporter,fain,actiune,DA,4
+5,Mario,ok,animatie,DA,5
+6,IronMan,top,actiune,NU,3
+7,JohnWick,legendar,thriller,NU,1
+8,JohnWick2,legendar,thriller,NU,0
+9,JohnWick3,ok,thriller,NU,0
+10,HTTD,bun,animatie,NU,4
