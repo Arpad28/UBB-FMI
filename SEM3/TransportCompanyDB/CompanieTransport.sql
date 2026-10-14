@@ -1,0 +1,72 @@
+CREATE TABLE CompanieTransport;
+
+USE CompanieTransport;
+
+CREATE TABLE Clienti(
+	ID_Client INT PRIMARY KEY IDENTITY(1,1),
+	Nume VARCHAR(100),
+	Telefon VARCHAR(20) UNIQUE,
+	Email VARCHAR(100) UNIQUE
+);
+
+CREATE TABLE Soferi(
+	ID_Sofer INT PRIMARY KEY IDENTITY(1,1),
+	Nume VARCHAR(100),
+	Telefon VARCHAR(20)
+);
+
+CREATE TABLE Depozite(
+	ID_Depozit INT PRIMARY KEY IDENTITY(1,1),
+	Oras VARCHAR(50),
+	Adresa VARCHAR(150)
+);
+
+CREATE TABLE Servicii(
+	ID_Serviciu INT PRIMARY KEY IDENTITY(1,1),
+	Denumire VARCHAR(50),
+	Pret INT
+);
+
+CREATE TABLE Categorii_Masini(
+	ID_Categorie INT PRIMARY KEY IDENTITY(1,1),
+	Denumire VARCHAR(50),
+	Tonaj INT
+);
+
+CREATE TABLE Masini(
+	ID_Masina INT PRIMARY KEY IDENTITY(1,1),
+	Numar_Inmatriculare VARCHAR(10) UNIQUE,
+	Marca VARCHAR(50),
+	ID_Categorie INT FOREIGN KEY REFERENCES Categorii_Masini(ID_Categorie)
+);
+
+CREATE TABLE Comenzi(
+	ID_Comanda INT PRIMARY KEY IDENTITY(1,1),
+	Data_Comenzii DATETIME,
+	Adresa_Livrare VARCHAR(50),
+	Pret INT,
+	ID_Client INT FOREIGN KEY REFERENCES Clienti(ID_Client)
+);
+
+CREATE TABLE Curse(
+	ID_Cursa INT PRIMARY KEY IDENTITY(1,1),
+	Data_Plecarii DATETIME,
+	Data_Sosirii DATETIME,
+	ID_Depozit INT FOREIGN KEY REFERENCES Depozite(ID_Depozit),
+	ID_Masina INT FOREIGN KEY REFERENCES Masini(ID_Masina),
+	ID_Sofer INT FOREIGN KEY REFERENCES Soferi(ID_Sofer)
+);
+
+CREATE TABLE Colete(
+	ID_Colet INT PRIMARY KEY IDENTITY(1,1),
+	Greutate INT,
+	ID_Comanda INT FOREIGN KEY REFERENCES Comenzi(ID_Comanda),
+	ID_Cursa INT FOREIGN KEY REFERENCES Curse(ID_Cursa)
+);
+
+CREATE TABLE Comenzi_Servicii(
+	ID_Comanda INT FOREIGN KEY REFERENCES Comenzi(ID_Comanda),
+	ID_Serviciu INT FOREIGN KEY REFERENCES Servicii(ID_Serviciu),
+	Pret INT,
+	CONSTRAINT ID_CServiciu PRIMARY KEY (ID_Comanda, ID_Serviciu)
+);
