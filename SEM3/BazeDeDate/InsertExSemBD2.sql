@@ -64,3 +64,15 @@ INSERT INTO Note_Vizite (nota, ID_vizitator, ID_atractie) VALUES
 (8.30, 8, 10),
 (9.90, 9, 11),
 (8.10, 10, 12);
+
+SELECT * FROM Atractii
+
+UPDATE Atractii SET Descriere=N'Carusel Mare'
+WHERE ID_atractie=1;
+
+DELETE FROM Note_Vizite
+WHERE ID_atractie=1;
+
+SELECT * FROM Note_Vizite
+
+DELETE FROM Atractii WHERE ID_atractie=1;
