@@ -1,13 +1,18 @@
 package UI;
 
-import Domain.Prietenie;
+import Domain.CriteriiUtilizator;
 import Domain.Utilizator;
 import Domain.validators.ValidationException;
 import Repository.RepositoryException;
 import Service.ReteaService;
 
+import java.util.List;
 import java.util.Scanner;
+import java.util.function.Predicate;
 
+/**
+ * Console-based user interface.
+ */
 public class ConsoleUI {
     private final ReteaService service;
     private final Scanner scanner;
@@ -24,10 +29,13 @@ public class ConsoleUI {
             System.out.println("2. Sterge utilizator");
             System.out.println("3. Adauga prietenie");
             System.out.println("4. Sterge prietenie");
-            System.out.println("5. Afiseaza toti utilizatorii");
+            System.out.println("5. Afiseaza toti utilizatorii (sortati)");
             System.out.println("6. Afiseaza toate prieteniile");
             System.out.println("7. Numar de comunitati");
             System.out.println("8. Cea mai sociabila comunitate");
+            System.out.println("9. Afiseaza prietenii unui utilizator");
+            System.out.println("10. Cauta utilizatori dupa nume si prefix prenume (Predicate)");
+            System.out.println("11. Afiseaza utilizatorii cu ID par (Static Method Reference)");
             System.out.println("0. Iesire");
             System.out.print("Alegeti o optiune: ");
 
@@ -58,6 +66,15 @@ public class ConsoleUI {
                         break;
                     case "8":
                         System.out.println("Cea mai sociabila comunitate (ID-uri): " + service.ceaMaiSociabilaComunitate());
+                        break;
+                    case "9":
+                        afiseazaPrieteniUser();
+                        break;
+                    case "10":
+                        cautaUtilizatoriCriteriu();
+                        break;
+                    case "11":
+                        afiseazaUtilizatoriIdPar();
                         break;
                     case "0":
                         return;
@@ -114,14 +131,43 @@ public class ConsoleUI {
     }
 
     private void afiseazaUtilizatori() {
-        for (Utilizator u : service.getAllUtilizatori()) {
-            System.out.println(u);
-        }
+        service.getAllUtilizatori().forEach(System.out::println);
     }
 
     private void afiseazaPrietenii() {
-        for (Prietenie p : service.getAllPrietenii()) {
-            System.out.println(p);
+        service.getAllPrietenii().forEach(System.out::println);
+    }
+
+    private void afiseazaPrieteniUser() {
+        System.out.print("ID Utilizator: ");
+        Long id = Long.parseLong(scanner.nextLine().trim());
+        List<Utilizator> prieteni = service.getPrieteniUtilizator(id);
+        if (prieteni.isEmpty()) {
+            System.out.println("Acest utilizator nu are prieteni.");
+        } else {
+            prieteni.forEach(System.out::println);
         }
+    }
+
+    private void cautaUtilizatoriCriteriu() {
+        System.out.print("Nume familie cautat: ");
+        String nume = scanner.nextLine().trim();
+        System.out.print("Prefix prenume: ");
+        String prefix = scanner.nextLine().trim();
+
+        Predicate<Utilizator> criteriuCompus = CriteriiUtilizator.areNumele(nume)
+                .and(CriteriiUtilizator.prenumeIncepeCu(prefix));
+
+        List<Utilizator> rezultat = service.filtreazaUtilizatori(criteriuCompus);
+        if (rezultat.isEmpty()) {
+            System.out.println("Niciun utilizator nu corespunde criteriilor.");
+        } else {
+            rezultat.forEach(System.out::println);
+        }
+    }
+
+    private void afiseazaUtilizatoriIdPar() {
+        List<Utilizator> rezultat = service.filtreazaUtilizatori(CriteriiUtilizator::areIdPar);
+        rezultat.forEach(System.out::println);
     }
 }

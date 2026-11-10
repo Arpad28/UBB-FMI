@@ -11,15 +11,21 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
+import java.util.function.Function;
 
 /**
- * Factory class responsible for creating Repository instances based on configuration.
+ * Factory class creating Repository instances using a Map of functional creators instead of switch.
  */
 public class RepositoryFactory {
     private static RepositoryFactory instance;
     private final Properties properties;
     private final RepositoryType repositoryType;
+    private final Map<RepositoryType, Function<Validator<Utilizator>, Repository<Long, Utilizator>>> userRepoCreators;
+    private final Map<RepositoryType, Function<Validator<Prietenie>, Repository<Tuple<Long, Long>, Prietenie>>> friendshipRepoCreators;
 
     private RepositoryFactory() {
         this.properties = loadProperties();
@@ -29,6 +35,39 @@ public class RepositoryFactory {
         } catch (IllegalArgumentException e) {
             throw new RepositoryException("Valoare necunoscuta pentru repository.type: " + typeStr, e);
         }
+
+        this.userRepoCreators = new EnumMap<>(RepositoryType.class);
+        this.friendshipRepoCreators = new EnumMap<>(RepositoryType.class);
+        initCreators();
+    }
+
+    /**
+     * Initializes the maps associating each RepositoryType with its creation function.
+     */
+    private void initCreators() {
+        // 1. Creatorii pentru UtilizatorRepository (foloseste referinta la constructor InMemoryRepository::new)
+        userRepoCreators.put(RepositoryType.MEMORY, InMemoryRepository::new);
+        userRepoCreators.put(RepositoryType.FILE, validator ->
+                new UtilizatorFileRepository(validator, getRequiredProperty("file.utilizatori")));
+        userRepoCreators.put(RepositoryType.DATABASE, validator ->
+                new UtilizatorDbRepository(
+                        validator,
+                        getRequiredProperty("db.url"),
+                        getRequiredProperty("db.user"),
+                        getRequiredProperty("db.password")
+                ));
+
+        // 2. Creatorii pentru PrietenieRepository
+        friendshipRepoCreators.put(RepositoryType.MEMORY, InMemoryRepository::new);
+        friendshipRepoCreators.put(RepositoryType.FILE, validator ->
+                new PrietenieFileRepository(validator, getRequiredProperty("file.prietenii")));
+        friendshipRepoCreators.put(RepositoryType.DATABASE, validator ->
+                new PrietenieDbRepository(
+                        validator,
+                        getRequiredProperty("db.url"),
+                        getRequiredProperty("db.user"),
+                        getRequiredProperty("db.password")
+                ));
     }
 
     /**
@@ -62,7 +101,7 @@ public class RepositoryFactory {
                 throw new RepositoryException("Eroare la citirea config.properties!", e);
             }
         } else {
-            try (InputStream is = RepositoryFactory.class.getClassLoader().getResourceAsStream("main/resources/config.properties")) {
+            try (InputStream is = RepositoryFactory.class.getClassLoader().getResourceAsStream("config.properties")) {
                 if (is == null) {
                     throw new RepositoryException("Fisierul src/main/resources/config.properties nu a fost gasit!");
                 }
@@ -83,46 +122,24 @@ public class RepositoryFactory {
     }
 
     /**
-     * Creates the User Repository according to the configured persistence type.
+     * Creates the User Repository using the mapped creator function.
      * @param validator the validator for Utilizator entities
      * @return the configured Repository for Utilizator
      */
     public Repository<Long, Utilizator> createUtilizatorRepository(Validator<Utilizator> validator) {
-        switch (repositoryType) {
-            case MEMORY:
-                return new InMemoryRepository<>(validator);
-            case FILE:
-                String userFile = getRequiredProperty("file.utilizatori");
-                return new UtilizatorFileRepository(validator, userFile);
-            case DATABASE:
-                String url = getRequiredProperty("db.url");
-                String user = getRequiredProperty("db.user");
-                String password = getRequiredProperty("db.password");
-                return new UtilizatorDbRepository(validator, url, user, password);
-            default:
-                throw new RepositoryException("Tip de repository nesuportat: " + repositoryType);
-        }
+        return Optional.ofNullable(userRepoCreators.get(repositoryType))
+                .orElseThrow(() -> new RepositoryException("Tip de repository nesuportat: " + repositoryType))
+                .apply(validator);
     }
 
     /**
-     * Creates the Friendship Repository according to the configured persistence type.
+     * Creates the Friendship Repository using the mapped creator function.
      * @param validator the validator for Prietenie entities
      * @return the configured Repository for Prietenie
      */
     public Repository<Tuple<Long, Long>, Prietenie> createPrietenieRepository(Validator<Prietenie> validator) {
-        switch (repositoryType) {
-            case MEMORY:
-                return new InMemoryRepository<>(validator);
-            case FILE:
-                String friendFile = getRequiredProperty("file.prietenii");
-                return new PrietenieFileRepository(validator, friendFile);
-            case DATABASE:
-                String url = getRequiredProperty("db.url");
-                String user = getRequiredProperty("db.user");
-                String password = getRequiredProperty("db.password");
-                return new PrietenieDbRepository(validator, url, user, password);
-            default:
-                throw new RepositoryException("Tip de repository nesuportat: " + repositoryType);
-        }
+        return Optional.ofNullable(friendshipRepoCreators.get(repositoryType))
+                .orElseThrow(() -> new RepositoryException("Tip de repository nesuportat: " + repositoryType))
+                .apply(validator);
     }
 }

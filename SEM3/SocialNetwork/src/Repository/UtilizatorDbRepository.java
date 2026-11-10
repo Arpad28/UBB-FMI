@@ -3,6 +3,11 @@ package Repository;
 import Domain.Utilizator;
 import Domain.validators.Validator;
 
+import java.util.Optional;
+
+/**
+ * Skeleton database repository for Utilizator entities (to be implemented in Lab 5).
+ */
 public class UtilizatorDbRepository implements Repository<Long, Utilizator> {
     private final Validator<Utilizator> validator;
     private final String url;
@@ -17,27 +22,27 @@ public class UtilizatorDbRepository implements Repository<Long, Utilizator> {
     }
 
     @Override
-    public Utilizator findOne(Long id) {
-        throw new UnsupportedOperationException("Persistența DB va fi implementată în Laboratorul 4.");
+    public Optional<Utilizator> findOne(Long id) {
+        throw new UnsupportedOperationException("Persistenta DB va fi implementata in Laboratorul 5.");
     }
 
     @Override
     public Iterable<Utilizator> findAll() {
-        throw new UnsupportedOperationException("Persistența DB va fi implementată în Laboratorul 4.");
+        throw new UnsupportedOperationException("Persistenta DB va fi implementata in Laboratorul 5.");
     }
 
     @Override
-    public Utilizator save(Utilizator entity) {
-        throw new UnsupportedOperationException("Persistența DB va fi implementată în Laboratorul 4.");
+    public Optional<Utilizator> save(Utilizator entity) {
+        throw new UnsupportedOperationException("Persistenta DB va fi implementata in Laboratorul 5.");
     }
 
     @Override
-    public Utilizator delete(Long id) {
-        throw new UnsupportedOperationException("Persistența DB va fi implementată în Laboratorul 4.");
+    public Optional<Utilizator> delete(Long id) {
+        throw new UnsupportedOperationException("Persistenta DB va fi implementata in Laboratorul 5.");
     }
 
     @Override
-    public Utilizator update(Utilizator entity) {
-        throw new UnsupportedOperationException("Persistența DB va fi implementată în Laboratorul 4.");
+    public Optional<Utilizator> update(Utilizator entity) {
+        throw new UnsupportedOperationException("Persistenta DB va fi implementata in Laboratorul 5.");
     }
 }

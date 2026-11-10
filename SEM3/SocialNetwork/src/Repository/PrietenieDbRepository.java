@@ -4,6 +4,11 @@ import Domain.Prietenie;
 import Domain.Tuple;
 import Domain.validators.Validator;
 
+import java.util.Optional;
+
+/**
+ * Skeleton database repository for Prietenie entities (to be implemented in Lab 5).
+ */
 public class PrietenieDbRepository implements Repository<Tuple<Long, Long>, Prietenie> {
     private final Validator<Prietenie> validator;
     private final String url;
@@ -18,27 +23,27 @@ public class PrietenieDbRepository implements Repository<Tuple<Long, Long>, Prie
     }
 
     @Override
-    public Prietenie findOne(Tuple<Long, Long> id) {
-        throw new UnsupportedOperationException("Persistența DB va fi implementată în Laboratorul 4.");
+    public Optional<Prietenie> findOne(Tuple<Long, Long> id) {
+        throw new UnsupportedOperationException("Persistenta DB va fi implementata in Laboratorul 5.");
     }
 
     @Override
     public Iterable<Prietenie> findAll() {
-        throw new UnsupportedOperationException("Persistența DB va fi implementată în Laboratorul 4.");
+        throw new UnsupportedOperationException("Persistenta DB va fi implementata in Laboratorul 5.");
     }
 
     @Override
-    public Prietenie save(Prietenie entity) {
-        throw new UnsupportedOperationException("Persistența DB va fi implementată în Laboratorul 4.");
+    public Optional<Prietenie> save(Prietenie entity) {
+        throw new UnsupportedOperationException("Persistenta DB va fi implementata in Laboratorul 5.");
     }
 
     @Override
-    public Prietenie delete(Tuple<Long, Long> id) {
-        throw new UnsupportedOperationException("Persistența DB va fi implementată în Laboratorul 4.");
+    public Optional<Prietenie> delete(Tuple<Long, Long> id) {
+        throw new UnsupportedOperationException("Persistenta DB va fi implementata in Laboratorul 5.");
     }
 
     @Override
-    public Prietenie update(Prietenie entity) {
-        throw new UnsupportedOperationException("Persistența DB va fi implementată în Laboratorul 4.");
+    public Optional<Prietenie> update(Prietenie entity) {
+        throw new UnsupportedOperationException("Persistenta DB va fi implementata in Laboratorul 5.");
     }
 }
