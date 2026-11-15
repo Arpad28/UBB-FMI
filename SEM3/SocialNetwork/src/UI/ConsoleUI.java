@@ -25,7 +25,7 @@ public class ConsoleUI {
     public void run() {
         while (true) {
             System.out.println("\n--- Meniu ---");
-            System.out.println("1. Adauga utilizator");
+            System.out.println("1. Adauga utilizator (ID generat automat)");
             System.out.println("2. Sterge utilizator");
             System.out.println("3. Adauga prietenie");
             System.out.println("4. Sterge prietenie");
@@ -36,6 +36,7 @@ public class ConsoleUI {
             System.out.println("9. Afiseaza prietenii unui utilizator");
             System.out.println("10. Cauta utilizatori dupa nume si prefix prenume (Predicate)");
             System.out.println("11. Afiseaza utilizatorii cu ID par (Static Method Reference)");
+            System.out.println("12. Actualizeaza utilizator (Update)");
             System.out.println("0. Iesire");
             System.out.print("Alegeti o optiune: ");
 
@@ -76,6 +77,9 @@ public class ConsoleUI {
                     case "11":
                         afiseazaUtilizatoriIdPar();
                         break;
+                    case "12":
+                        modificaUser();
+                        break;
                     case "0":
                         return;
                     default:
@@ -87,7 +91,7 @@ public class ConsoleUI {
             } catch (ValidationException e) {
                 System.out.println("Eroare de validare: " + e.getMessage());
             } catch (RepositoryException e) {
-                System.out.println("Eroare de persistenta: " + e.getMessage());
+                System.out.println("Eroare de persistenta/baza de date: " + e.getMessage());
             } catch (IllegalArgumentException | UnsupportedOperationException e) {
                 System.out.println("Eroare: " + e.getMessage());
             }
@@ -95,14 +99,23 @@ public class ConsoleUI {
     }
 
     private void adaugaUser() {
-        System.out.print("ID: ");
-        Long id = Long.parseLong(scanner.nextLine().trim());
         System.out.print("Prenume: ");
         String prenume = scanner.nextLine().trim();
         System.out.print("Nume: ");
         String nume = scanner.nextLine().trim();
-        service.addUtilizator(id, prenume, nume);
-        System.out.println("Utilizator adaugat!");
+        Utilizator salvat = service.addUtilizator(prenume, nume);
+        System.out.println("Utilizator adaugat cu succes! ID-ul generat este: " + salvat.getId());
+    }
+
+    private void modificaUser() {
+        System.out.print("ID utilizator de actualizat: ");
+        Long id = Long.parseLong(scanner.nextLine().trim());
+        System.out.print("Prenume nou: ");
+        String prenume = scanner.nextLine().trim();
+        System.out.print("Nume nou: ");
+        String nume = scanner.nextLine().trim();
+        service.updateUtilizator(id, prenume, nume);
+        System.out.println("Utilizator actualizat cu succes!");
     }
 
     private void stergeUser() {

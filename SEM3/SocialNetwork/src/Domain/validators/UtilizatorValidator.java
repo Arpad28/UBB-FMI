@@ -3,36 +3,34 @@ package Domain.validators;
 import Domain.Utilizator;
 
 /**
- * Validator implementation for Utilizator entities.
+ * Validator for Utilizator entities.
  */
 public class UtilizatorValidator implements Validator<Utilizator> {
 
     /**
-     * Validates a Utilizator entity.
-     * @param entity the user to be validated
-     * @throws ValidationException if the user attributes are invalid
+     * Validates a user entity. ID may be null before persistence generation,
+     * but if present, it must be strictly positive.
+     * @param entity the user to validate
+     * @throws ValidationException if first name, last name, or non-null ID is invalid
      */
     @Override
     public void validate(Utilizator entity) {
         if (entity == null) {
-            throw new ValidationException("Entitatea nu poate fi null!");
+            throw new IllegalArgumentException("Entitatea Utilizator nu poate fi null!");
         }
-
         StringBuilder errors = new StringBuilder();
 
-        if (entity.getId() == null || entity.getId() <= 0) {
-            errors.append("ID-ul trebuie sa fie un numar pozitiv!\n");
+        if (entity.getId() != null && entity.getId() <= 0) {
+            errors.append("ID-ul utilizatorului trebuie sa fie un numar strict pozitiv!\n");
         }
-
         if (entity.getFirstName() == null || entity.getFirstName().trim().isEmpty()) {
-            errors.append("Prenumele nu poate fi gol!\n");
+            errors.append("Prenumele nu poate fi vid!\n");
         }
-
         if (entity.getLastName() == null || entity.getLastName().trim().isEmpty()) {
-            errors.append("Numele nu poate fi gol!\n");
+            errors.append("Numele de familie nu poate fi vid!\n");
         }
 
-        if (!errors.isEmpty()) {
+        if (errors.length() > 0) {
             throw new ValidationException(errors.toString().trim());
         }
     }

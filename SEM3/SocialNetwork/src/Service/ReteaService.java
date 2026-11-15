@@ -4,6 +4,7 @@ import Domain.Prietenie;
 import Domain.Tuple;
 import Domain.Utilizator;
 import Repository.Repository;
+import Repository.RepositoryException;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -21,7 +22,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
- * Service class handling business logic for the social network using Java 8 Stream API and Optional.
+ * Service class handling business logic for the social network.
  */
 public class ReteaService {
     private final Repository<Long, Utilizator> repoUtilizatori;
@@ -39,19 +40,10 @@ public class ReteaService {
         curataPrieteniiOrfane();
     }
 
-    /**
-     * Helper method converting an Iterable into a Stream (written once, as required).
-     * @param iterable the iterable to convert
-     * @param <T> the element type
-     * @return a sequential Stream over the elements
-     */
     private <T> Stream<T> toStream(Iterable<T> iterable) {
         return StreamSupport.stream(iterable.spliterator(), false);
     }
 
-    /**
-     * Removes any friendship whose users do not exist at startup, using Stream API.
-     */
     private void curataPrieteniiOrfane() {
         try {
             List<Tuple<Long, Long>> deSters = toStream(repoPrietenii.findAll())
@@ -64,8 +56,8 @@ public class ReteaService {
                 System.err.println("Prietenie ignorata/stearsa (utilizator inexistent): " + id);
                 repoPrietenii.delete(id);
             });
-        } catch (UnsupportedOperationException e) {
-            // Ignoram daca suntem pe modul schelet DATABASE
+        } catch (RepositoryException e) {
+            System.err.println("Atentie la initializare: " + e.getMessage());
         }
     }
 
@@ -73,33 +65,54 @@ public class ReteaService {
      * Finds a user by ID.
      * @param id the ID of the user
      * @return an Optional containing the user if found
+     * @throws RepositoryException if a persistence error occurs
      */
     public Optional<Utilizator> findUtilizator(Long id) {
         return repoUtilizatori.findOne(id);
     }
 
     /**
-     * Adds a new user to the network.
-     * @param id the user's ID
+     * Adds a new user to the network; the ID is generated automatically by the storage layer.
      * @param firstName the user's first name
      * @param lastName the user's last name
+     * @return the saved Utilizator with its generated ID populated
+     * @throws RepositoryException if a database error occurs
      */
-    public void addUtilizator(Long id, String firstName, String lastName) {
+    public Utilizator addUtilizator(String firstName, String lastName) {
+        Utilizator u = new Utilizator(firstName, lastName);
+        repoUtilizatori.save(u).ifPresent(existing -> {
+            throw new IllegalArgumentException("Utilizatorul nu a putut fi salvat!");
+        });
+        return u;
+    }
+
+    /**
+     * Updates an existing user's first and last name.
+     * @param id the ID of the user to update
+     * @param firstName the new first name
+     * @param lastName the new last name
+     * @throws IllegalArgumentException if no user with the given ID exists
+     * @throws RepositoryException if a database error occurs
+     */
+    public void updateUtilizator(Long id, String firstName, String lastName) {
         Utilizator u = new Utilizator(firstName, lastName);
         u.setId(id);
-        repoUtilizatori.save(u).ifPresent(existing -> {
-            throw new IllegalArgumentException("Exista deja un utilizator cu ID-ul " + id + "!");
+        repoUtilizatori.update(u).ifPresent(notFound -> {
+            throw new IllegalArgumentException("Nu exista niciun utilizator cu ID-ul " + id + "!");
         });
     }
 
     /**
-     * Removes a user and all of their friendships using Stream API.
+     * Removes a user and ensures all of their friendships are removed.
      * @param id the ID of the user to remove
+     * @throws IllegalArgumentException if the user does not exist
+     * @throws RepositoryException if a database error occurs
      */
     public void removeUtilizator(Long id) {
         repoUtilizatori.delete(id)
                 .orElseThrow(() -> new IllegalArgumentException("Nu exista niciun utilizator cu ID-ul " + id + "!"));
 
+        // Pentru MEMORY si FILE stergem si din repoPrietenii; in DB sunt sterse deja de ON DELETE CASCADE
         List<Tuple<Long, Long>> prieteniiDeSters = repoPrietenii
                 .findAll(p -> p.getId().getE1().equals(id) || p.getId().getE2().equals(id))
                 .stream()
@@ -113,6 +126,8 @@ public class ReteaService {
      * Adds a friendship between two existing users.
      * @param id1 the first user's ID
      * @param id2 the second user's ID
+     * @throws IllegalArgumentException if either user does not exist or friendship already exists
+     * @throws RepositoryException if a database error occurs
      */
     public void addPrietenie(Long id1, Long id2) {
         repoUtilizatori.findOne(id1)
@@ -130,6 +145,8 @@ public class ReteaService {
      * Removes a friendship between two users.
      * @param id1 the first user's ID
      * @param id2 the second user's ID
+     * @throws IllegalArgumentException if the friendship does not exist
+     * @throws RepositoryException if a database error occurs
      */
     public void removePrietenie(Long id1, Long id2) {
         Prietenie dummy = new Prietenie(id1, id2);
@@ -137,10 +154,6 @@ public class ReteaService {
                 .orElseThrow(() -> new IllegalArgumentException("Prietenia specificata nu exista!"));
     }
 
-    /**
-     * Returns all users sorted by last name and then by first name using Comparator.comparing.
-     * @return a sorted list of all users
-     */
     public List<Utilizator> getAllUtilizatori() {
         return toStream(repoUtilizatori.findAll())
                 .sorted(Comparator.comparing(Utilizator::getLastName)
@@ -148,20 +161,11 @@ public class ReteaService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Returns all friendships.
-     * @return a list of all friendships
-     */
     public List<Prietenie> getAllPrietenii() {
         return toStream(repoPrietenii.findAll())
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Returns the friends of a given user using Stream pipeline (filter, map, flatMap, sorted).
-     * @param userId the ID of the user
-     * @return a list of Utilizator representing the user's friends
-     */
     public List<Utilizator> getPrieteniUtilizator(Long userId) {
         repoUtilizatori.findOne(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Utilizatorul cu ID-ul " + userId + " nu exista!"));
@@ -176,11 +180,6 @@ public class ReteaService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Searches users matching a given predicate.
-     * @param criteriu the predicate filter
-     * @return a sorted list of matching users
-     */
     public List<Utilizator> filtreazaUtilizatori(Predicate<Utilizator> criteriu) {
         return repoUtilizatori.findAll(criteriu)
                 .stream()
@@ -188,8 +187,6 @@ public class ReteaService {
                         .thenComparing(Utilizator::getFirstName))
                 .collect(Collectors.toList());
     }
-
-    // --- ALGORITMI GRAFURI (STREAM API + BFS) ---
 
     private Map<Long, List<Long>> construiesteListaAdiacenta() {
         Map<Long, List<Long>> adj = toStream(repoUtilizatori.findAll())
@@ -232,10 +229,6 @@ public class ReteaService {
         return distante;
     }
 
-    /**
-     * Computes the number of connected components (communities) using Stream count().
-     * @return the number of communities
-     */
     public int nrComunitati() {
         Map<Long, List<Long>> adj = construiesteListaAdiacenta();
         Set<Long> vizitat = new HashSet<>();
@@ -246,10 +239,6 @@ public class ReteaService {
                 .count();
     }
 
-    /**
-     * Finds the most sociable community (component with maximum shortest-path diameter) using Stream max().
-     * @return a list of user IDs in the most sociable community
-     */
     public List<Long> ceaMaiSociabilaComunitate() {
         Map<Long, List<Long>> adj = construiesteListaAdiacenta();
 

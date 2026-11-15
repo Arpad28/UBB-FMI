@@ -3,10 +3,18 @@ package Repository;
 import Domain.Utilizator;
 import Domain.validators.Validator;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 /**
- * Skeleton database repository for Utilizator entities (to be implemented in Lab 5).
+ * JDBC repository implementation for Utilizator entities persisted in PostgreSQL.
  */
 public class UtilizatorDbRepository implements Repository<Long, Utilizator> {
     private final Validator<Utilizator> validator;
@@ -14,6 +22,13 @@ public class UtilizatorDbRepository implements Repository<Long, Utilizator> {
     private final String user;
     private final String password;
 
+    /**
+     * Constructs a UtilizatorDbRepository with database connection parameters.
+     * @param validator the validator for Utilizator entities
+     * @param url the JDBC connection URL
+     * @param user the database username
+     * @param password the database password
+     */
     public UtilizatorDbRepository(Validator<Utilizator> validator, String url, String user, String password) {
         this.validator = validator;
         this.url = url;
@@ -21,28 +36,157 @@ public class UtilizatorDbRepository implements Repository<Long, Utilizator> {
         this.password = password;
     }
 
+    /**
+     * Extracts a Utilizator entity from the current row of a ResultSet.
+     * @param rs the active ResultSet
+     * @return the reconstructed Utilizator
+     * @throws SQLException if a database access error occurs
+     */
+    private Utilizator extractUser(ResultSet rs) throws SQLException {
+        Long id = rs.getLong("id");
+        String firstName = rs.getString("first_name");
+        String lastName = rs.getString("last_name");
+        Utilizator u = new Utilizator(firstName, lastName);
+        u.setId(id);
+        return u;
+    }
+
+    /**
+     * Finds a user by ID in the database.
+     * @param id the ID of the user (must not be null)
+     * @return an Optional containing the user if found, or empty otherwise
+     * @throws IllegalArgumentException if id is null
+     * @throws RepositoryException if a database access error occurs
+     */
     @Override
     public Optional<Utilizator> findOne(Long id) {
-        throw new UnsupportedOperationException("Persistenta DB va fi implementata in Laboratorul 5.");
+        if (id == null) {
+            throw new IllegalArgumentException("ID-ul nu poate fi null!");
+        }
+        String sql = "SELECT id, first_name, last_name FROM users WHERE id = ?";
+        try (Connection conn = DriverManager.getConnection(url, user, password);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(extractUser(rs));
+                }
+                return Optional.empty();
+            }
+        } catch (SQLException e) {
+            throw new RepositoryException("Eroare DB la cautarea utilizatorului (verificati conexiunea la server): " + e.getMessage(), e);
+        }
     }
 
+    /**
+     * Retrieves all users from the database.
+     * @return an Iterable of all users
+     * @throws RepositoryException if a database access error occurs
+     */
     @Override
     public Iterable<Utilizator> findAll() {
-        throw new UnsupportedOperationException("Persistenta DB va fi implementata in Laboratorul 5.");
+        List<Utilizator> users = new ArrayList<>();
+        String sql = "SELECT id, first_name, last_name FROM users";
+        try (Connection conn = DriverManager.getConnection(url, user, password);
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                users.add(extractUser(rs));
+            }
+            return users;
+        } catch (SQLException e) {
+            throw new RepositoryException("Eroare DB la incarcarea utilizatorilor (verificati conexiunea la server): " + e.getMessage(), e);
+        }
     }
 
+    /**
+     * Saves a new user in the database and populates its database-generated ID.
+     * @param entity the user to save (must not be null)
+     * @return Optional.empty() if saved successfully
+     * @throws IllegalArgumentException if entity is null
+     * @throws Domain.validators.ValidationException if entity is not valid
+     * @throws RepositoryException if a database error occurs
+     */
     @Override
     public Optional<Utilizator> save(Utilizator entity) {
-        throw new UnsupportedOperationException("Persistenta DB va fi implementata in Laboratorul 5.");
+        if (entity == null) {
+            throw new IllegalArgumentException("Entitatea nu poate fi null!");
+        }
+        validator.validate(entity);
+
+        String sql = "INSERT INTO users (first_name, last_name) VALUES (?, ?)";
+        try (Connection conn = DriverManager.getConnection(url, user, password);
+             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, entity.getFirstName());
+            ps.setString(2, entity.getLastName());
+            int affectedRows = ps.executeUpdate();
+            if (affectedRows == 0) {
+                return Optional.of(entity);
+            }
+            try (ResultSet generatedKeys = ps.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    entity.setId(generatedKeys.getLong(1));
+                }
+            }
+            return Optional.empty();
+        } catch (SQLException e) {
+            throw new RepositoryException("Eroare DB la salvarea utilizatorului: " + e.getMessage(), e);
+        }
     }
 
+    /**
+     * Deletes a user by ID from the database and returns the deleted entity.
+     * @param id the ID of the user to delete (must not be null)
+     * @return an Optional containing the deleted user, or empty if no user had the given ID
+     * @throws IllegalArgumentException if id is null
+     * @throws RepositoryException if a database error occurs
+     */
     @Override
     public Optional<Utilizator> delete(Long id) {
-        throw new UnsupportedOperationException("Persistenta DB va fi implementata in Laboratorul 5.");
+        if (id == null) {
+            throw new IllegalArgumentException("ID-ul nu poate fi null!");
+        }
+        Optional<Utilizator> existing = findOne(id);
+        if (existing.isEmpty()) {
+            return Optional.empty();
+        }
+
+        String sql = "DELETE FROM users WHERE id = ?";
+        try (Connection conn = DriverManager.getConnection(url, user, password);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, id);
+            int affected = ps.executeUpdate();
+            return affected > 0 ? existing : Optional.empty();
+        } catch (SQLException e) {
+            throw new RepositoryException("Eroare DB la stergerea utilizatorului: " + e.getMessage(), e);
+        }
     }
 
+    /**
+     * Updates an existing user in the database.
+     * @param entity the user to update (must not be null and must have a non-null ID)
+     * @return Optional.empty() if updated, or Optional.of(entity) if the user ID does not exist
+     * @throws IllegalArgumentException if entity or its ID is null
+     * @throws Domain.validators.ValidationException if entity is not valid
+     * @throws RepositoryException if a database error occurs
+     */
     @Override
     public Optional<Utilizator> update(Utilizator entity) {
-        throw new UnsupportedOperationException("Persistenta DB va fi implementata in Laboratorul 5.");
+        if (entity == null || entity.getId() == null) {
+            throw new IllegalArgumentException("Entitatea si ID-ul nu pot fi null!");
+        }
+        validator.validate(entity);
+
+        String sql = "UPDATE users SET first_name = ?, last_name = ? WHERE id = ?";
+        try (Connection conn = DriverManager.getConnection(url, user, password);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, entity.getFirstName());
+            ps.setString(2, entity.getLastName());
+            ps.setLong(3, entity.getId());
+            int affected = ps.executeUpdate();
+            return affected > 0 ? Optional.empty() : Optional.of(entity);
+        } catch (SQLException e) {
+            throw new RepositoryException("Eroare DB la actualizarea utilizatorului: " + e.getMessage(), e);
+        }
     }
 }

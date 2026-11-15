@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * In-memory implementation of the Repository interface.
+ * In-memory implementation of the Repository interface with automatic Long ID generation support.
  * @param <ID> the type of entity ID
  * @param <E> the type of entity
  */
@@ -39,11 +39,23 @@ public class InMemoryRepository<ID, E extends Entity<ID>> implements Repository<
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Optional<E> save(E entity) {
         if (entity == null) {
             throw new IllegalArgumentException("Entitatea nu poate fi null!");
         }
         validator.validate(entity);
+
+        if (entity.getId() == null) {
+            Long nextId = entities.keySet().stream()
+                    .filter(Long.class::isInstance)
+                    .map(Long.class::cast)
+                    .mapToLong(Long::longValue)
+                    .max()
+                    .orElse(0L) + 1L;
+            entity.setId((ID) nextId);
+        }
+
         return Optional.ofNullable(entities.putIfAbsent(entity.getId(), entity));
     }
 
@@ -57,8 +69,8 @@ public class InMemoryRepository<ID, E extends Entity<ID>> implements Repository<
 
     @Override
     public Optional<E> update(E entity) {
-        if (entity == null) {
-            throw new IllegalArgumentException("Entitatea nu poate fi null!");
+        if (entity == null || entity.getId() == null) {
+            throw new IllegalArgumentException("Entitatea si ID-ul nu pot fi null!");
         }
         validator.validate(entity);
         if (!entities.containsKey(entity.getId())) {
