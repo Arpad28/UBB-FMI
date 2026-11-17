@@ -1,0 +1,6 @@
+repository.type=DATABASE
+file.utilizatori=data/utilizatori.txt
+file.prietenii=data/prietenii.txt
+db.url=jdbc:postgresql://localhost:5432/socialnetwork
+db.user=postgres
+db.password=YOUR_PASSWORD_HERE

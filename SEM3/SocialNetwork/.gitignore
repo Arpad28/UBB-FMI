@@ -1,19 +1,24 @@
-### IntelliJ IDEA ###
+# Gradle & Build
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
-**/config.properties
-doc/
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+# IntelliJ IDEA
 .idea/
-*.iml
 *.iws
+*.iml
+*.ipr
 .kotlin
 
-### Java ###
-*.class
-*.log
-
-### Eclipse ###
+# Eclipse & NetBeans
 .apt_generated
 .classpath
 .factorypath
@@ -21,19 +26,14 @@ doc/
 .settings
 .springBeans
 .sts4-cache
-bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
-
-### NetBeans ###
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
-/.nb-gradle/
 
-### VS Code ###
-.vscode/
+# Java
+*.class
+*.log
 
-### Mac OS ###
-.DS_Store
+# Securitate si Date Locale
+**/config.properties
