@@ -2,6 +2,8 @@ package Repository;
 
 import Domain.Utilizator;
 import Domain.validators.Validator;
+import util.paging.Page;
+import util.paging.Pageable;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -16,7 +18,7 @@ import java.util.Optional;
 /**
  * JDBC repository implementation for Utilizator entities persisted in PostgreSQL.
  */
-public class UtilizatorDbRepository implements Repository<Long, Utilizator> {
+public class UtilizatorDbRepository implements PagingRepository<Long, Utilizator> {
     private final Validator<Utilizator> validator;
     private final String url;
     private final String user;
@@ -187,6 +189,48 @@ public class UtilizatorDbRepository implements Repository<Long, Utilizator> {
             return affected > 0 ? Optional.empty() : Optional.of(entity);
         } catch (SQLException e) {
             throw new RepositoryException("Eroare DB la actualizarea utilizatorului: " + e.getMessage(), e);
+        }
+    }
+    /**
+     * Retrieves a page of users from the database using SQL LIMIT and OFFSET,
+     * along with the total user count on the same database connection.
+     *
+     * @param pageable pagination parameters (page number and page size)
+     * @return a Page of Utilizator entities
+     * @throws IllegalArgumentException if pageable is null
+     * @throws RepositoryException      if a database access error occurs
+     */
+    @Override
+    public Page<Utilizator> findAllOnPage(Pageable pageable) {
+        if (pageable == null) {
+            throw new IllegalArgumentException("Pageable nu poate fi null!");
+        }
+        List<Utilizator> users = new ArrayList<>();
+        String sqlPage = "SELECT id, first_name, last_name FROM users ORDER BY id LIMIT ? OFFSET ?";
+        String sqlCount = "SELECT COUNT(*) AS count FROM users";
+
+        try (Connection connection = DriverManager.getConnection(url, user, password)) {
+            try (PreparedStatement ps = connection.prepareStatement(sqlPage)) {
+                ps.setInt(1, pageable.getPageSize());
+                ps.setInt(2, pageable.getPageNumber() * pageable.getPageSize());
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        users.add(extractUser(rs));
+                    }
+                }
+            }
+
+            int totalCount = 0;
+            try (PreparedStatement psCount = connection.prepareStatement(sqlCount);
+                 ResultSet rsCount = psCount.executeQuery()) {
+                if (rsCount.next()) {
+                    totalCount = rsCount.getInt("count");
+                }
+            }
+
+            return new Page<>(users, totalCount);
+        } catch (SQLException e) {
+            throw new RepositoryException("Eroare la paginarea utilizatorilor: " + e.getMessage(), e);
         }
     }
 }

@@ -142,4 +142,22 @@ public class RepositoryFactory {
                 .orElseThrow(() -> new RepositoryException("Tip de repository nesuportat: " + repositoryType))
                 .apply(validator);
     }
+    /**
+     * Reads the configured page size from config.properties.
+     *
+     * @return the page size (defaults to 2 if not specified)
+     * @throws IllegalArgumentException if the configured page.size is not a valid positive integer
+     */
+    public int getPageSize() {
+        String prop = properties.getProperty("page.size", "2");
+        try {
+            int size = Integer.parseInt(prop.trim());
+            if (size <= 0) {
+                throw new IllegalArgumentException("page.size trebuie sa fie strict pozitiv!");
+            }
+            return size;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Valoare invalida pentru page.size in config.properties: " + prop);
+        }
+    }
 }

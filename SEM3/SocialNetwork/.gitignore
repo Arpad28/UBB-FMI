@@ -37,3 +37,4 @@ bin/
 
 # Securitate si Date Locale
 **/config.properties
+data/

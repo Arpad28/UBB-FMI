@@ -9,6 +9,9 @@ import Service.ReteaService;
 import java.util.List;
 import java.util.Scanner;
 import java.util.function.Predicate;
+import util.paging.Page;
+import util.paging.Pageable;
+import java.util.function.Function;
 
 /**
  * Console-based user interface.
@@ -16,9 +19,11 @@ import java.util.function.Predicate;
 public class ConsoleUI {
     private final ReteaService service;
     private final Scanner scanner;
+    private final int pageSize;
 
-    public ConsoleUI(ReteaService service) {
+    public ConsoleUI(ReteaService service, int pageSize) {
         this.service = service;
+        this.pageSize = pageSize;
         this.scanner = new Scanner(System.in);
     }
 
@@ -37,6 +42,8 @@ public class ConsoleUI {
             System.out.println("10. Cauta utilizatori dupa nume si prefix prenume (Predicate)");
             System.out.println("11. Afiseaza utilizatorii cu ID par (Static Method Reference)");
             System.out.println("12. Actualizeaza utilizator (Update)");
+            System.out.println("13. Afiseaza utilizatori (paginat)");
+            System.out.println("14. Afiseaza prietenii unui utilizator (paginat)");
             System.out.println("0. Iesire");
             System.out.print("Alegeti o optiune: ");
 
@@ -79,6 +86,15 @@ public class ConsoleUI {
                         break;
                     case "12":
                         modificaUser();
+                        break;
+                    case "13":
+                        afiseazaPaginat("Lista Utilizatori", service::getUtilizatoriOnPage);
+                        break;
+                    case "14":
+                        System.out.print("Introduceti ID-ul utilizatorului: ");
+                        Long userId = Long.parseLong(scanner.nextLine().trim());
+                        afiseazaPaginat("Prietenii utilizatorului " + userId,
+                                pageable -> service.getPrieteniOnPage(userId, pageable));
                         break;
                     case "0":
                         return;
@@ -182,5 +198,59 @@ public class ConsoleUI {
     private void afiseazaUtilizatoriIdPar() {
         List<Utilizator> rezultat = service.filtreazaUtilizatori(CriteriiUtilizator::areIdPar);
         rezultat.forEach(System.out::println);
+    }
+    /**
+     * Interactive console loop for navigating paginated lists of users.
+     *
+     * @param title       the header title to display
+     * @param pageFetcher a function that retrieves a Page given a Pageable
+     */
+    private void afiseazaPaginat(String title, Function<Pageable, Page<Utilizator>> pageFetcher) {
+        int currentPage = 0;
+
+        while (true) {
+            Page<Utilizator> page = pageFetcher.apply(new Pageable(currentPage, pageSize));
+            int totalElements = page.getTotalNumberOfElements();
+            int totalPages = (int) Math.ceil((double) totalElements / pageSize);
+
+            System.out.println("\n--- " + title + " ---");
+
+            if (totalElements == 0) {
+                System.out.println("Nu exista elemente de afisat (Pagina 0 din 0).");
+                return;
+            }
+
+            if (currentPage >= totalPages) {
+                currentPage = totalPages - 1;
+                continue;
+            }
+
+            page.getElementsOnPage().forEach(System.out::println);
+            System.out.printf("Pagina %d din %d (Total elemente: %d)%n", currentPage + 1, totalPages, totalElements);
+
+            System.out.print("[p] Inapoi | [n] Inainte | [x] Iesire: ");
+            String cmd = scanner.nextLine().trim().toLowerCase();
+
+            switch (cmd) {
+                case "n" -> {
+                    if (currentPage + 1 < totalPages) {
+                        currentPage++;
+                    } else {
+                        System.out.println("Esti deja pe ultima pagina.");
+                    }
+                }
+                case "p" -> {
+                    if (currentPage > 0) {
+                        currentPage--;
+                    } else {
+                        System.out.println("Esti deja pe prima pagina.");
+                    }
+                }
+                case "x" -> {
+                    return;
+                }
+                default -> System.out.println("Comanda invalida!");
+            }
+        }
     }
 }

@@ -14,6 +14,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import Domain.Utilizator;
+import util.paging.Page;
+import util.paging.Pageable;
 
 /**
  * JDBC repository implementation for Prietenie entities persisted in PostgreSQL.
@@ -196,6 +199,68 @@ public class PrietenieDbRepository implements Repository<Tuple<Long, Long>, Prie
             return affected > 0 ? Optional.empty() : Optional.of(entity);
         } catch (SQLException e) {
             throw new RepositoryException("Eroare DB la actualizarea prieteniei: " + e.getMessage(), e);
+        }
+    }
+    /**
+     * Retrieves a paginated list of friends for a specific user using a single SQL JOIN query,
+     * along with the total friend count on the same database connection.
+     *
+     * @param userId   the ID of the user whose friends are retrieved
+     * @param pageable pagination parameters (page number and page size)
+     * @return a Page of Utilizator representing the user's friends on the requested page
+     * @throws IllegalArgumentException if userId or pageable is null
+     * @throws RepositoryException      if a database access error occurs
+     */
+    public Page<Utilizator> findFriendsOnPage(Long userId, Pageable pageable) {
+        if (userId == null || pageable == null) {
+            throw new IllegalArgumentException("User ID si Pageable nu pot fi null!");
+        }
+
+        List<Utilizator> friends = new ArrayList<>();
+        String sqlPage = """
+                SELECT u.id, u.first_name, u.last_name
+                FROM friendships f
+                JOIN users u ON (f.id1 = u.id OR f.id2 = u.id)
+                WHERE (f.id1 = ? OR f.id2 = ?) AND u.id != ?
+                ORDER BY u.id
+                LIMIT ? OFFSET ?
+                """;
+        String sqlCount = "SELECT COUNT(*) AS count FROM friendships WHERE id1 = ? OR id2 = ?";
+
+        try (Connection connection = DriverManager.getConnection(url, user, password)) {
+            try (PreparedStatement ps = connection.prepareStatement(sqlPage)) {
+                ps.setLong(1, userId);
+                ps.setLong(2, userId);
+                ps.setLong(3, userId);
+                ps.setInt(4, pageable.getPageSize());
+                ps.setInt(5, pageable.getPageNumber() * pageable.getPageSize());
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Long id = rs.getLong("id");
+                        String firstName = rs.getString("first_name");
+                        String lastName = rs.getString("last_name");
+                        Utilizator friend = new Utilizator(firstName, lastName);
+                        friend.setId(id);
+                        friends.add(friend);
+                    }
+                }
+            }
+
+            int totalCount = 0;
+            try (PreparedStatement psCount = connection.prepareStatement(sqlCount)) {
+                psCount.setLong(1, userId);
+                psCount.setLong(2, userId);
+                try (ResultSet rsCount = psCount.executeQuery()) {
+                    if (rsCount.next()) {
+                        totalCount = rsCount.getInt("count");
+                    }
+                }
+            }
+
+            return new Page<>(friends, totalCount);
+        } catch (SQLException e) {
+            throw new RepositoryException("Eroare la paginarea prietenilor: " + e.getMessage(), e);
         }
     }
 }

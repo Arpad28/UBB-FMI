@@ -28,7 +28,7 @@ public class Main {
             Repository<Tuple<Long, Long>, Prietenie> repoPrietenii = factory.createPrietenieRepository(prietenieValidator);
 
             ReteaService service = new ReteaService(repoUtilizatori, repoPrietenii);
-            ConsoleUI ui = new ConsoleUI(service);
+            ConsoleUI ui = new ConsoleUI(service, factory.getPageSize());
             ui.run();
         } catch (RepositoryException e) {
             System.err.println("Eroare critica la initializarea aplicatiei: " + e.getMessage());

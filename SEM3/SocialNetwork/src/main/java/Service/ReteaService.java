@@ -20,6 +20,10 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+import Repository.PagingRepository;
+import Repository.PrietenieDbRepository;
+import util.paging.Page;
+import util.paging.Pageable;
 
 /**
  * Service class handling business logic for the social network.
@@ -249,5 +253,44 @@ public class ReteaService {
                 .map(Map::keySet)
                 .map(ArrayList::new)
                 .orElseGet(ArrayList::new);
+    }
+    /**
+     * Retrieves a page of users from the repository.
+     *
+     * @param pageable pagination parameters (page number and page size)
+     * @return a Page of Utilizator entities
+     * @throws IllegalArgumentException      if pageable is null
+     * @throws UnsupportedOperationException if the active repository does not support paging
+     */
+    public Page<Utilizator> getUtilizatoriOnPage(Pageable pageable) {
+        if (pageable == null) {
+            throw new IllegalArgumentException("Pageable nu poate fi null!");
+        }
+        if (repoUtilizatori instanceof PagingRepository<Long, Utilizator> pagingRepo) {
+            return pagingRepo.findAllOnPage(pageable);
+        }
+        throw new UnsupportedOperationException("Paginarea este disponibila doar pentru repository.type=DATABASE.");
+    }
+
+    /**
+     * Retrieves a page of friends for a given user.
+     *
+     * @param userId   the ID of the user
+     * @param pageable pagination parameters (page number and page size)
+     * @return a Page of Utilizator representing the user's friends
+     * @throws IllegalArgumentException      if userId or pageable is null, or if the user does not exist
+     * @throws UnsupportedOperationException if the active repository does not support DB friend paging
+     */
+    public Page<Utilizator> getPrieteniOnPage(Long userId, Pageable pageable) {
+        if (userId == null || pageable == null) {
+            throw new IllegalArgumentException("ID-ul utilizatorului si Pageable nu pot fi null!");
+        }
+        repoUtilizatori.findOne(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Utilizatorul cu ID " + userId + " nu exista."));
+
+        if (repoPrietenii instanceof PrietenieDbRepository prietenieDbRepo) {
+            return prietenieDbRepo.findFriendsOnPage(userId, pageable);
+        }
+        throw new UnsupportedOperationException("Paginarea prietenilor este disponibila doar pentru repository.type=DATABASE.");
     }
 }
